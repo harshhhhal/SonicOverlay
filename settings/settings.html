@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>SonicOverlay settings</title><link rel="stylesheet" href="settings.css"></head>
+<body id="so-options">
+<main>
+  <h1>SonicOverlay</h1>
+  <p>Manage visualizer settings and presets. Changes sync to open Spotify tabs instantly. To see live changes, keep Spotify open with capture running.</p>
+  <div id="panel-root"></div>
+  <h2>Why these permissions</h2>
+  <ul>
+    <li><code>tabCapture</code> &ndash; analyzes the Spotify tab&rsquo;s audio, only after you press Start.</li>
+    <li><code>activeTab</code> &ndash; lets Chrome grant capture for the tab you invoked the extension on.</li>
+    <li><code>offscreen</code> &ndash; hosts the Web Audio analyzer, which service workers cannot do.</li>
+    <li><code>storage</code> &ndash; saves your settings and presets on this device.</li>
+    <li><code>open.spotify.com</code> &ndash; draws the overlay and reads the visible track title, artist and cover.</li>
+    <li><code>i.scdn.co</code> &ndash; fallback download of the cover image (image only) when the page blocks reading its colors.</li>
+  </ul>
+  <h2>Keyboard shortcuts</h2>
+  <p>Defaults: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> overlay, <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> panel, <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> edit mode, <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> capture. Change them at <code>chrome://extensions/shortcuts</code>.</p>
+</main>
+<script src="../utils/message-types.js"></script>
+<script src="../utils/validation.js"></script>
+<script src="../utils/color-utils.js"></script>
+<script src="../utils/dom-utils.js"></script>
+<script src="../storage/settings-store.js"></script>
+<script src="../storage/preset-store.js"></script>
+<script src="../visualizers/renderer-manager.js"></script>
+<script src="../visualizers/common.js"></script>
+<script src="../visualizers/classic-spectrum.js"></script>
+<script src="../visualizers/radial-spectrum.js"></script>
+<script src="../visualizers/circular-waveform.js"></script>
+<script src="../visualizers/linear-waveform.js"></script>
+<script src="../visualizers/mirrored-spectrum.js"></script>
+<script src="../visualizers/frequency-curve.js"></script>
+<script src="../visualizers/dot-spectrum.js"></script>
+<script src="../visualizers/stacked-spectrum.js"></script>
+<script src="../visualizers/particle-field.js"></script>
+<script src="../visualizers/ambient-orbs.js"></script>
+<script src="../visualizers/album-art-ring.js"></script>
+<script src="../visualizers/minimal-equalizer.js"></script>
+<script src="../visualizers/neon-oscilloscope.js"></script>
+<script src="../visualizers/liquid-ribbon.js"></script>
+<script src="../visualizers/aurora-flow.js"></script>
+<script src="../visualizers/frequency-mountain.js"></script>
+<script src="../visualizers/vortex-tunnel.js"></script>
+<script src="../visualizers/starfield-drift.js"></script>
+<script src="../visualizers/plasma-orbit.js"></script>
+<script src="../visualizers/concentric-pulse.js"></script>
+<script src="../visualizers/glitch-spectrum.js"></script>
+<script src="../visualizers/equalizer-matrix.js"></script>
+<script src="../visualizers/spectrum-ribbon.js"></script>
+<script src="../visualizers/orbiting-particles.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

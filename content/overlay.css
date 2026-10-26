@@ -1,0 +1,22 @@
+/* SonicOverlay - host element + inner overlay layers.
+   RULE: everything here is pointer-events:none except the explicitly interactive handles and the settings panel. */
+#sonic-overlay-root {
+  position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important;
+  pointer-events: none !important; z-index: 2147483647 !important; display: block !important; contain: layout style;
+}
+:host { pointer-events: none; }
+.so-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: transparent; pointer-events: none; }
+.so-edit { position: fixed; inset: 0; pointer-events: none; --so-accent: #8ab4ff; }
+.so-edit[hidden] { display: none; }
+.so-edit-frame { position: absolute; box-sizing: border-box; border: 1.5px dashed var(--so-accent); border-radius: 4px; pointer-events: none; background: rgba(138, 180, 255, 0.04); }
+.so-edit-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 6px 10px; border-radius: 8px; background: rgba(12, 13, 17, 0.82); color: #e9eaf0; font: 12px/1.3 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
+.so-handle { position: absolute; pointer-events: auto; touch-action: none; background: #101116; color: #e9eaf0; border: 1.5px solid var(--so-accent); font: 600 11px/1 system-ui, sans-serif; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); user-select: none; }
+.so-handle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.so-handle--move { left: 50%; top: -34px; transform: translateX(-50%); padding: 7px 12px; border-radius: 999px; cursor: move; white-space: nowrap; }
+.so-handle--resize { right: -10px; bottom: -10px; width: 20px; height: 20px; border-radius: 6px; cursor: nwse-resize; position: absolute; }
+.so-handle--resize::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 6px; height: 6px; border-right: 2px solid var(--so-accent); border-bottom: 2px solid var(--so-accent); }
+.so-handle--done { right: 0; top: -34px; padding: 7px 12px; border-radius: 999px; cursor: pointer; background: var(--so-accent); color: #0b0c10; border-color: transparent; }
+.so-toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); max-width: min(520px, 92vw); padding: 10px 14px; border-radius: 10px; background: rgba(16, 17, 22, 0.94); color: #e9eaf0; font: 13px/1.4 system-ui, sans-serif; border: 1px solid #343744; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45); pointer-events: none; z-index: 100; transition: opacity 0.2s ease, transform 0.2s ease; }
+.so-toast[hidden] { display: none; }
+.so-toast b { display: block; margin-bottom: 2px; }
