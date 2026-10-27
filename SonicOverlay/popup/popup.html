@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>SonicOverlay</title><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header>
+    <span class="logo" id="logo"></span><h1>SonicOverlay</h1>
+    <span class="pill" id="pill" data-state="idle"><i></i><span id="pillText">Not capturing</span></span>
+  </header>
+  <main>
+    <div class="notice" id="notice" hidden>
+      <p>Open Spotify Web Player in this tab to use SonicOverlay.</p>
+      <button type="button" class="btn" id="openSpotify">Open open.spotify.com</button>
+    </div>
+    <button type="button" class="primary" id="capture">Start visualization</button>
+    <p class="hint" id="hint">Starts capturing this tab&rsquo;s audio. Spotify keeps playing normally.</p>
+    <div class="error" id="error" hidden role="alert"><strong id="errTitle"></strong><p id="errHint"></p></div>
+
+    <div class="group">
+      <label class="row"><span>Overlay visible</span><input type="checkbox" id="enabled" role="switch"><span class="sw" aria-hidden="true"></span></label>
+      <label class="row"><span>Visualizer</span><select id="viz"></select></label>
+      <label class="row"><span>Preset</span><select id="preset"></select></label>
+    </div>
+    <div class="btns">
+      <button type="button" class="btn" id="panelBtn">Settings panel</button>
+      <button type="button" class="btn" id="editBtn">Edit layout</button>
+    </div>
+    <button type="button" class="link" id="moreBtn">All settings &amp; presets</button>
+
+    <details class="keys">
+      <summary>Keyboard shortcuts</summary>
+      <ul>
+        <li><span>Show / hide overlay</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>V</kbd></li>
+        <li><span>Show / hide settings panel</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>S</kbd></li>
+        <li><span>Toggle edit mode</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>E</kbd></li>
+        <li><span>Start / stop capture</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>C</kbd></li>
+      </ul>
+      <button type="button" class="link" id="shortcutsBtn">Customize shortcuts</button>
+    </details>
+  </main>
+  <script src="../utils/message-types.js"></script>
+  <script src="../utils/validation.js"></script>
+  <script src="../utils/dom-utils.js"></script>
+  <script src="../storage/settings-store.js"></script>
+  <script src="../storage/preset-store.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
