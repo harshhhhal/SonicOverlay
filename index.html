@@ -3,15 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SonicOverlay: audio visualizer overlay for Spotify Web Player</title>
-<meta name="description" content="SonicOverlay is a free Chrome extension that draws real-time, click-through audio visualizations over the Spotify Web Player, colored by the album art.">
+<title>SonicOverlay – Audio Visualizer Overlay for Spotify Web Player</title>
+<meta name="description" content="SonicOverlay is a free, open-source Chrome extension with 24 real-time, click-through audio visualizers for Spotify Web Player, colored by album art.">
+<meta name="keywords" content="Spotify visualizer, Spotify Web Player visualizer, audio visualizer Chrome extension, music visualizer, Spotify overlay, Chromium extension">
+<meta name="author" content="SonicOverlay contributors">
+<meta name="application-name" content="SonicOverlay">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="canonical" href="https://harshhhhal.github.io/SonicOverlay/">
+<link rel="manifest" href="SonicOverlay/manifest.json">
 <meta name="theme-color" content="#100e20">
-<meta property="og:title" content="SonicOverlay">
-<meta property="og:description" content="24 real-time visualizers drawn over Spotify Web Player. Transparent, click-through, tinted by the album art.">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SonicOverlay">
+<meta property="og:url" content="https://harshhhhal.github.io/SonicOverlay/">
+<meta property="og:title" content="SonicOverlay – Audio Visualizer Overlay for Spotify Web Player">
+<meta property="og:description" content="24 real-time, click-through audio visualizers for Spotify Web Player, tinted by album art.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SonicOverlay – Audio Visualizer Overlay for Spotify Web Player">
+<meta name="twitter:description" content="24 real-time, click-through audio visualizers for Spotify Web Player, tinted by album art.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%23101116'/%3E%3Cg fill='%238ab4ff'%3E%3Crect x='26' y='62' width='13' height='38' rx='6.5'/%3E%3Crect x='45' y='40' width='13' height='60' rx='6.5'/%3E%3Crect x='64' y='52' width='13' height='48' rx='6.5'/%3E%3Crect x='83' y='28' width='13' height='72' rx='6.5' fill='%23d98aff'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "SonicOverlay",
+      "applicationCategory": "BrowserApplication",
+      "applicationSubCategory": "Audio visualizer browser extension",
+      "operatingSystem": "Chrome, Edge, Brave, Vivaldi",
+      "browserRequirements": "Requires a Chromium browser version 116 or later",
+      "description": "A free, open-source browser extension that draws real-time, click-through audio visualizations over Spotify Web Player and colors them from album art.",
+      "url": "https://harshhhhal.github.io/SonicOverlay/",
+      "downloadUrl": "https://github.com/harshhhhal/SonicOverlay",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": "24 audio-reactive visualizers, album-art color matching, click-through overlay, presets, keyboard shortcuts, local settings"
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why press Start each time?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Chrome requires a click before it can capture tab audio." }
+        },
+        {
+          "@type": "Question",
+          "name": "The overlay is not showing.",
+          "acceptedAnswer": { "@type": "Answer", "text": "Reload the Spotify tab after installation." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work in the desktop app?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. SonicOverlay is for Spotify Web Player on desktop Chromium browsers." }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 :root{
   --ink:#100e20;       /* page */
