@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SonicOverlay: audio visualizer overlay for Spotify Web Player</title>
+<meta name="description" content="SonicOverlay is a free Chrome extension that draws real-time, click-through audio visualizations over the Spotify Web Player, colored by the album art.">
+<meta name="theme-color" content="#100e20">
+<meta property="og:title" content="SonicOverlay">
+<meta property="og:description" content="24 real-time visualizers drawn over Spotify Web Player. Transparent, click-through, tinted by the album art.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%23101116'/%3E%3Cg fill='%238ab4ff'%3E%3Crect x='26' y='62' width='13' height='38' rx='6.5'/%3E%3Crect x='45' y='40' width='13' height='60' rx='6.5'/%3E%3Crect x='64' y='52' width='13' height='48' rx='6.5'/%3E%3Crect x='83' y='28' width='13' height='72' rx='6.5' fill='%23d98aff'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#100e20;       /* page */
+  --ink-2:#18152d;     /* raised surface */
+  --ink-3:#252044;     /* lines, controls */
+  --text:#eceeff;
+  --muted:#aaa7cf;
+  --a1:#92baff; --a2:#ad91ff; --a3:#d29aff;   /* follow the selected album */
+  --on-accent:#0b0c16;
+  --display:'Bricolage Grotesque',system-ui,sans-serif;
+  --body:'Figtree',system-ui,sans-serif;
+  --gutter:clamp(18px,4vw,56px);
+  --max:1240px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--text);font:400 17px/1.6 var(--body);-webkit-font-smoothing:antialiased}
+img,canvas,svg{display:block;max-width:100%}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--a1);outline-offset:3px;border-radius:6px}
+.wrap{width:min(var(--max),100% - var(--gutter)*2);margin-inline:auto}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.02;letter-spacing:-.025em}
+h1{font-size:clamp(2.6rem,6vw,5rem);font-weight:800;max-width:14ch}
+h2{font-size:clamp(2rem,4.4vw,3.4rem);font-weight:700;max-width:18ch}
+h3{font-size:1.25rem;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+p{margin:0}
+.lede{font-size:clamp(1.05rem,1.6vw,1.3rem);color:var(--muted);max-width:56ch}
+.kbd,kbd{font:600 .78rem/1 var(--body);background:var(--ink-3);border:1px solid #2c3050;border-bottom-width:2px;border-radius:6px;padding:.28rem .5rem;color:var(--text)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--ink) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid #ffffff10}
+.nav .wrap{display:flex;align-items:center;gap:28px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font:700 1.1rem var(--display);text-decoration:none;letter-spacing:-.01em}
+.brand svg{width:30px;height:30px}
+.nav nav{display:flex;gap:22px;margin-left:auto;font-size:.95rem}
+.nav nav a{text-decoration:none;color:var(--muted);transition:color .15s}
+.nav nav a:hover{color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:600 1rem var(--body);text-decoration:none;border-radius:999px;padding:.8rem 1.4rem;border:1px solid transparent;cursor:pointer;transition:transform .15s,background .3s,border-color .15s}
+.btn-primary{background:var(--a1);color:var(--on-accent)}
+.btn-primary:hover{transform:translateY(-2px)}
+.btn-ghost{border-color:#ffffff30;color:var(--text);background:transparent}
+.btn-ghost:hover{border-color:#ffffff80}
+.nav .btn{padding:.55rem 1.1rem;font-size:.92rem}
+
+/* hero */
+.hero{padding:clamp(32px,5vw,64px) 0 clamp(36px,6vw,72px)}
+.hero-top{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:end}
+.hero-top .lede{margin-top:20px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center}
+.fine{font-size:.88rem;color:var(--muted)}
+.hero-aside{max-width:260px;font-size:.92rem;color:var(--muted);padding-bottom:6px}
+.hero-aside b{color:var(--text);font-weight:600}
+
+/* demo window */
+.stage{margin-top:clamp(28px,4vw,44px)}
+.win{position:relative;border-radius:18px;overflow:hidden;background:#0a0a12;border:1px solid #ffffff1c;box-shadow:0 40px 120px -30px color-mix(in srgb,var(--a2) 45%,transparent),0 0 0 1px #00000080;transition:box-shadow .6s}
+.win-bar{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;background:#12131f;border-bottom:1px solid #ffffff12}
+.win-bar i{width:11px;height:11px;border-radius:50%;background:#2b2e47}
+.url{margin-left:12px;flex:1;max-width:340px;font-size:.78rem;color:var(--muted);background:#0a0b14;border-radius:999px;padding:.3rem .9rem}
+.win-body{position:relative;display:grid;grid-template-columns:190px 1fr;grid-template-rows:1fr 70px;aspect-ratio:16/8.6;min-height:420px;background:#0a0a12}
+.side{grid-row:1/3;padding:18px 14px;border-right:1px solid #ffffff0d;display:flex;flex-direction:column;gap:12px}
+.side span{height:10px;border-radius:5px;background:#1a1c2e}
+.side span:nth-child(1){width:60%;background:#262941}
+.side span:nth-child(3n){width:75%}
+.side span:nth-child(4n){width:48%}
+.main{padding:24px 28px;display:grid;grid-template-columns:auto 1fr;gap:22px;align-content:start;min-width:0}
+.cover{width:clamp(96px,13vw,150px);aspect-ratio:1;border-radius:10px;box-shadow:0 16px 40px -10px #000;transition:background .6s}
+.now small{display:block;color:var(--muted);font-size:.8rem;margin-bottom:4px}
+.now h3{font-size:clamp(1.3rem,2.6vw,2.2rem);font-weight:800}
+.now p{color:var(--muted);margin-top:4px;font-size:.95rem}
+.queue{grid-column:2;margin-top:6px;display:flex;flex-direction:column;gap:2px;max-width:420px}
+.track{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:6px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:.9rem}
+.track:hover{background:#ffffff0a}
+.track:focus-visible{outline:2px solid var(--a1)}
+.track[aria-pressed=true]{background:#ffffff12;color:var(--text)}
+.track .th{width:30px;height:30px;border-radius:5px;flex:none}
+.track b{font-weight:600;color:var(--text);display:block;line-height:1.2}
+.track span{font-size:.8rem;line-height:1.2}
+.playbar{grid-column:2;display:flex;align-items:center;gap:16px;padding:0 24px;border-top:1px solid #ffffff0d;background:#0d0e18}
+.pp{all:unset;box-sizing:border-box;width:38px;height:38px;border-radius:50%;background:var(--text);color:#0a0a12;display:grid;place-items:center;cursor:pointer;flex:none}
+.pp:focus-visible{outline:2px solid var(--a1);outline-offset:3px}
+.pp svg{width:16px;height:16px}
+.bar{flex:1;height:4px;border-radius:2px;background:#262941;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;background:var(--text);border-radius:2px}
+.pb-title{font-size:.85rem;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%}
+#heroCanvas{position:absolute;inset:40px 0 0 0;width:100%;height:calc(100% - 40px);pointer-events:none}
+.overlay-tag{position:absolute;right:14px;top:52px;font-size:.78rem;background:#000000a0;border:1px solid #ffffff22;border-radius:999px;padding:.3rem .75rem;color:var(--muted);pointer-events:none}
+.overlay-tag b{color:var(--text);font-weight:600}
+
+.picker{display:flex;gap:8px;overflow-x:auto;padding:16px 2px 6px;scrollbar-width:thin;scrollbar-color:var(--ink-3) transparent}
+.chip{all:unset;box-sizing:border-box;flex:none;cursor:pointer;font:500 .92rem var(--body);padding:.5rem 1rem;border-radius:999px;border:1px solid #ffffff22;color:var(--muted);transition:background .15s,color .15s,border-color .15s}
+.chip:hover{color:var(--text);border-color:#ffffff55}
+.chip[aria-pressed=true]{background:var(--a1);border-color:var(--a1);color:var(--on-accent)}
+.chip:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+.demo-note{margin-top:10px;font-size:.86rem;color:var(--muted)}
+
+/* sections */
+section{padding:clamp(64px,10vw,128px) 0}
+.sec-head{display:grid;gap:18px;margin-bottom:clamp(32px,5vw,56px)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.tile{background:var(--ink-2);border-radius:14px;overflow:hidden;border:1px solid #ffffff10}
+.tile canvas{width:100%;aspect-ratio:16/10;background:#090a13}
+.tile div{padding:12px 14px 14px}
+.tile h3{font-size:1rem}
+.tile p{font-size:.84rem;color:var(--muted);line-height:1.4;margin-top:3px}
+.more{margin-top:28px;color:var(--muted);max-width:80ch}
+.more b{color:var(--text);font-weight:600}
+
+/* features */
+.features{background:var(--ink-2)}
+.feat{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:12px 56px;padding:30px 0;border-top:1px solid #ffffff14}
+.feat:last-child{border-bottom:1px solid #ffffff14}
+.feat h3{font-size:clamp(1.4rem,2.6vw,2rem);font-weight:700;letter-spacing:-.02em}
+.feat p{color:var(--muted);max-width:60ch}
+.feat p b{color:var(--text);font-weight:600}
+
+/* how */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;counter-reset:s;margin-top:8px}
+.flow li{list-style:none;position:relative;padding:0 24px 0 0;counter-increment:s}
+.flow li::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--a1);color:var(--on-accent);font:700 1rem var(--display);margin-bottom:18px;transition:background .3s}
+.flow li::after{content:"";position:absolute;top:19px;left:48px;right:10px;height:2px;background:linear-gradient(90deg,var(--ink-3),transparent)}
+.flow li:last-child::after{display:none}
+.flow h3{margin-bottom:8px}
+.flow p{color:var(--muted);font-size:.95rem}
+.flow{padding:0;margin-block:8px 0}
+pre.arch{margin:48px 0 0;padding:22px 26px;background:var(--ink-2);border:1px solid #ffffff12;border-radius:14px;overflow-x:auto;font:500 .85rem/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#c9cdf0}
+
+/* shortcuts + privacy */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(32px,6vw,96px)}
+.keys{display:grid;gap:0;margin-top:26px}
+.keys div{display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid #ffffff14}
+.keys div:last-child{border-bottom:1px solid #ffffff14}
+.keys span{margin-right:auto}
+.perm{margin:26px 0 0;padding:0;display:grid}
+.perm li{list-style:none;display:grid;grid-template-columns:minmax(0,10.5rem) 1fr;gap:16px;padding:14px 0;border-top:1px solid #ffffff14;font-size:.95rem}
+.perm li:last-child{border-bottom:1px solid #ffffff14}
+.perm code{font:600 .85rem ui-monospace,Menlo,Consolas,monospace;color:var(--a1);word-break:break-all}
+.perm span{color:var(--muted)}
+.promise{margin-top:22px;padding:18px 20px;border-radius:12px;background:var(--ink-2);border:1px solid #ffffff12;color:var(--muted);font-size:.95rem}
+.promise b{color:var(--text)}
+
+/* install */
+.install{background:var(--ink-2)}
+.steps{margin:0;padding:0;counter-reset:i;display:grid;gap:0;max-width:760px}
+.steps li{list-style:none;counter-increment:i;display:grid;grid-template-columns:44px 1fr;gap:18px;padding:22px 0;border-top:1px solid #ffffff14}
+.steps li:last-child{border-bottom:1px solid #ffffff14}
+.steps li::before{content:counter(i);font:700 1.6rem var(--display);color:var(--a1);transition:color .3s}
+.steps h3{margin-bottom:4px;font-size:1.15rem}
+.steps p{color:var(--muted);font-size:.97rem}
+code.i{font:500 .88em ui-monospace,Menlo,Consolas,monospace;background:var(--ink-3);padding:.12em .45em;border-radius:5px;color:var(--text)}
+.install .cta{margin-top:36px}
+
+/* faq */
+details{border-top:1px solid #ffffff14;padding:20px 0}
+details:last-of-type{border-bottom:1px solid #ffffff14}
+summary{cursor:pointer;font:600 1.1rem var(--display);list-style:none;display:flex;justify-content:space-between;gap:20px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:1.4rem;line-height:1;color:var(--a1);transition:transform .2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{color:var(--muted);margin-top:10px;max-width:64ch}
+.faq{max-width:860px}
+
+footer{padding:40px 0 56px;border-top:1px solid #ffffff14;color:var(--muted);font-size:.9rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 32px;justify-content:space-between}
+
+@media (max-width:960px){
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .hero-top{grid-template-columns:1fr}
+  .hero-aside{max-width:none}
+  .flow{grid-template-columns:1fr 1fr;gap:34px 0}
+  .flow li:nth-child(2)::after{display:none}
+  .two{grid-template-columns:1fr}
+  .feat{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+  .nav nav{display:none}
+  .nav .btn{margin-left:auto}
+  .win-body{grid-template-columns:1fr;aspect-ratio:auto;min-height:480px;grid-template-rows:1fr 64px}
+  .side{display:none}
+  .playbar{grid-column:1}
+  .main{padding:18px;grid-template-columns:auto 1fr}
+  .queue{grid-column:1/-1}
+  .tiles{grid-template-columns:1fr 1fr;gap:10px}
+  .tile div{padding:10px}
+  .tile p{display:none}
+  .flow{grid-template-columns:1fr}
+  .flow li::after{display:none}
+  .perm li{grid-template-columns:1fr;gap:2px}
+  .overlay-tag{display:none}
+  .pb-title{display:none}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="SonicOverlay home">
+      <svg viewBox="0 0 128 128" aria-hidden="true"><rect width="128" height="128" rx="28" fill="#101116"/><g fill="#8ab4ff"><rect x="26" y="62" width="13" height="38" rx="6.5"/><rect x="45" y="40" width="13" height="60" rx="6.5"/><rect x="64" y="52" width="13" height="48" rx="6.5"/><rect x="83" y="28" width="13" height="72" rx="6.5" fill="#d98aff"/></g></svg>
+      SonicOverlay
+    </a>
+    <nav aria-label="Sections">
+      <a href="#visualizers">Visualizers</a>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#install">Install</a>
+    </nav>
+    <a class="btn btn-primary" href="https://github.com/harshhhhal/SonicOverlay">Download</a>
+  </div>
+</header>
+
+<main id="top">
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-top">
+      <div>
+        <h1>Your music, drawn over Spotify.</h1>
+        <p class="lede">A click-through audio visualizer for Spotify Web Player, colored by your album art.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/harshhhhal/SonicOverlay">Download for Chrome</a>
+          <a class="btn btn-ghost" href="#install">How to install</a>
+        </div>
+        <p class="fine" style="margin-top:14px">Free, open source, and made for Chromium browsers.</p>
+      </div>
+      <p class="hero-aside"><b>Try it.</b> Pick a track or visualizer and watch it react.</p>
+    </div>
+
+    <div class="stage">
+      <div class="win" id="win">
+        <div class="win-bar"><i></i><i></i><i></i><span class="url">open.spotify.com</span></div>
+        <div class="win-body">
+          <div class="side" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="main">
+            <div class="cover" id="cover" aria-hidden="true"></div>
+            <div class="now"><small>Now playing</small><h3 id="nowTitle">Neon Tide</h3><p id="nowArtist">Halcyon Static</p></div>
+            <div class="queue" id="queue" role="group" aria-label="Sample tracks"></div>
+          </div>
+          <div class="playbar">
+            <button class="pp" id="pp" type="button" aria-label="Pause demo" aria-pressed="true"></button>
+            <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+            <span class="pb-title" id="pbTitle"></span>
+          </div>
+        </div>
+        <canvas id="heroCanvas" aria-label="Live demo of a SonicOverlay visualizer" role="img"></canvas>
+        <div class="overlay-tag">Overlay: <b id="tagName">Classic Spectrum</b></div>
+      </div>
+      <div class="picker" id="picker" role="group" aria-label="Choose a visualizer"></div>
+    </div>
+  </div>
+</div>
+
+<section id="visualizers">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>24 visualizers. Your music.</h2>
+      <p class="lede">Each reacts to your Spotify tab in real time.</p>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="sec-head"><h2>Built to stay out of your way</h2></div>
+    <div>
+      <div class="feat"><h3>Click-through overlay</h3><p>Spotify stays fully usable underneath.</p></div>
+      <div class="feat"><h3>Colors from the cover</h3><p>Album colors flow smoothly into every visualizer.</p></div>
+      <div class="feat"><h3>Easy to tune</h3><p>Adjust color, glow, sensitivity, and more. Changes apply live.</p></div>
+      <div class="feat"><h3>Place it anywhere</h3><p>Drag, resize, and save your preferred layout.</p></div>
+      <div class="feat"><h3>Built-in presets</h3><p>Start with 16 presets or make your own.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>How it works</h2>
+      <p class="lede">Press Start, then SonicOverlay listens to your active Spotify tab.</p>
+    </div>
+    <ol class="flow">
+      <li><h3>You press Start</h3><p>From the toolbar popup or with Alt+Shift+C, while the Spotify tab is active.</p></li>
+      <li><h3>Chrome hands over the tab audio</h3><p>The service worker requests a capture stream and passes it to an offscreen document.</p></li>
+      <li><h3>A Web Audio analyzer reads it</h3><p>An AnalyserNode produces spectrum and waveform data and sends it on at about 50 Hz.</p></li>
+      <li><h3>The overlay draws it</h3><p>Content script on the page turns the data into bands, smoothing and beats, then paints a canvas.</p></li>
+    </ol>
+<pre class="arch" aria-label="Architecture">popup (user gesture) → tabCapture → service worker → offscreen document
+offscreen: tab audio → AudioContext → AnalyserNode  (and back to speakers)
+          ~50 Hz → content script: bands, smoothing, beat → renderer → canvas</pre>
+  </div>
+</section>
+
+<section id="privacy" style="padding-top:0">
+  <div class="wrap two">
+    <div>
+      <h2>Shortcuts</h2>
+      <p class="lede" style="margin-top:16px">Customize them at <code class="i">chrome://extensions/shortcuts</code>. The popup offers the same actions.</p>
+      <div class="keys">
+        <div><span>Show or hide overlay</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>V</kbd></div>
+        <div><span>Show or hide settings panel</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>S</kbd></div>
+        <div><span>Toggle layout edit mode</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>E</kbd></div>
+        <div><span>Start or stop capture</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>C</kbd></div>
+      </div>
+    </div>
+    <div>
+      <h2>Why each permission</h2>
+      <ul class="perm">
+        <li><code>tabCapture</code><span>Captures the Spotify tab's audio, only after you press Start.</span></li>
+        <li><code>activeTab</code><span>Lets Chrome grant capture for the tab you invoked it on.</span></li>
+        <li><code>offscreen</code><span>Hosts the Web Audio analyzer, since service workers have no audio APIs.</span></li>
+        <li><code>storage</code><span>Saves your settings and presets locally.</span></li>
+        <li><code>open.spotify.com</code><span>Injects the overlay and reads the visible track title, artist and cover.</span></li>
+        <li><code>i.scdn.co</code><span>Fallback download of the cover image only, for color extraction.</span></li>
+      </ul>
+      <p class="promise"><b>No history, cookies, passwords, accounts, tokens or remote code.</b> No Spotify API and no credentials are used.</p>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <div class="sec-head"><h2>Install in two minutes</h2><p class="lede">Download the project, then load it as an unpacked extension.</p></div>
+    <ol class="steps">
+      <li><div><h3>Download and unzip</h3><p>Download SonicOverlay from GitHub and extract it.</p></div></li>
+      <li><div><h3>Open the extensions page</h3><p>Go to <code class="i">chrome://extensions</code> (Edge: <code class="i">edge://extensions</code>) and turn on <b>Developer mode</b>.</p></div></li>
+      <li><div><h3>Load the folder</h3><p>Click <b>Load unpacked</b> and choose the folder with <code class="i">manifest.json</code>.</p></div></li>
+      <li><div><h3>Start playing on Spotify</h3><p>Open <code class="i">open.spotify.com</code>, play something, and reload the tab once if it was already open.</p></div></li>
+      <li><div><h3>Press Start visualization</h3><p>With the Spotify tab active, click the toolbar icon and press <b>Start visualization</b>, or press Alt+Shift+C.</p></div></li>
+    </ol>
+    <div class="cta"><a class="btn btn-primary" href="https://github.com/harshhhhal/SonicOverlay">Download on GitHub</a><span class="fine">Desktop browsers only.</span></div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head"><h2>Questions</h2></div>
+    <div class="faq">
+      <details><summary>Why press Start each time?</summary><p>Chrome requires a click before it can capture tab audio.</p></details>
+      <details><summary>The overlay is not showing.</summary><p>Reload the Spotify tab after installation.</p></details>
+      <details><summary>Does it work in the desktop app?</summary><p>No. SonicOverlay is for Spotify Web Player on desktop Chromium browsers.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>SonicOverlay is released under the MIT license.</span>
+    <span>An independent project, not affiliated with or endorsed by Spotify.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const TAU = Math.PI * 2;
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- palettes (one per sample track) ---------- */
+const TRACKS = [
+  { title:'Neon Tide',    artist:'Halcyon Static',    c:['#ff3d9a','#8b5cff','#2fd6ff'] },
+  { title:'Amber Hours',  artist:'The Low Meridian',  c:['#ffb347','#ff6b6b','#c64b8c'] },
+  { title:'Fern Hall',    artist:'Orla Vance',        c:['#c4f56e','#2fc79a','#2a8fb0'] },
+  { title:'Signal Bloom', artist:'Paper Satellites',  c:['#8ab4ff','#b99bff','#d98aff'] }
+];
+const hex = (h) => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+const coverCss = (c) => `radial-gradient(circle at 25% 28%, ${c[0]}, transparent 55%), radial-gradient(circle at 78% 70%, ${c[2]}, transparent 60%), linear-gradient(135deg, ${c[1]}, #12132a)`;
+const P = { cur: TRACKS[0].c.map(hex), tgt: TRACKS[0].c.map(hex), moving:false };
+function col(p, a = 1) {
+  const x = clamp(p, 0, 1) * 2, i = Math.min(1, x | 0), k = x - i, A = P.cur[i], B = P.cur[i+1];
+  return `rgba(${(A[0]+(B[0]-A[0])*k)|0},${(A[1]+(B[1]-A[1])*k)|0},${(A[2]+(B[2]-A[2])*k)|0},${a})`;
+}
+function stepPalette() {
+  if (!P.moving) return;
+  let done = true;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const d = P.tgt[i][j] - P.cur[i][j];
+    if (Math.abs(d) > .5) { P.cur[i][j] += d * .08; done = false; } else P.cur[i][j] = P.tgt[i][j];
+  }
+  const r = document.documentElement.style;
+  r.setProperty('--a1', col(0)); r.setProperty('--a2', col(.5)); r.setProperty('--a3', col(1));
+  if (done) P.moving = false;
+}
+
+/* ---------- simulated audio ---------- */
+const AU = { spec:new Float32Array(64), wave:new Float32Array(256), bass:0, beat:0, energy:0, playing:true, level:0, t:0, lastBeat:-1, bpm:118 };
+function stepAudio(dt) {
+  AU.t += dt;
+  AU.level += ((AU.playing ? 1 : 0) - AU.level) * Math.min(1, dt * (AU.playing ? 6 : 4));
+  const t = AU.t, ph = (t * AU.bpm / 60) % 1, bi = Math.floor(t * AU.bpm / 60);
+  const kick = Math.exp(-ph * 5.5), off = Math.exp(-Math.abs(ph - .5) * 14);
+  AU.beat = AU.beat * .86; if (bi !== AU.lastBeat) { AU.lastBeat = bi; AU.beat = 1; }
+  const mc = .5 + .32 * Math.sin(t * .37) + .12 * Math.sin(t * 1.3);
+  for (let i = 0; i < 64; i++) {
+    const x = i / 63;
+    let v = kick * Math.max(0, 1 - x * 3.2) * .95;
+    v += .34 * Math.exp(-x * 2.2) * (.6 + .4 * Math.sin(t * 2.1 + i * .7));
+    v += .55 * Math.exp(-Math.pow((x - mc * .7) / .07, 2)) * (.65 + .35 * Math.sin(t * 5 + i));
+    v += off * x * x * .75 * (.6 + .4 * Math.sin(i * 12.9 + t * 9));
+    v += .08 * Math.sin(t * 7 + i * 1.7) * (1 - x);
+    v = clamp(v, 0, 1) * AU.level;
+    const s = AU.spec[i]; AU.spec[i] = v > s ? s + (v - s) * .65 : s + (v - s) * Math.min(1, dt * 7);
+  }
+  let e = 0; for (let i = 0; i < 64; i++) e += AU.spec[i]; AU.energy = e / 64;
+  AU.bass = (AU.spec[0] + AU.spec[1] + AU.spec[2] + AU.spec[3]) / 4;
+  const amp = (.22 + AU.energy * 1.1 + kick * .25) * AU.level;
+  for (let i = 0; i < 256; i++) {
+    const u = i / 256;
+    AU.wave[i] = amp * (.62 * Math.sin(TAU * (3 * u) + t * 4) + .28 * Math.sin(TAU * (7 * u) - t * 7.3) + .12 * Math.sin(TAU * (17 * u) + t * 13));
+  }
+}
+function bands(n) {
+  const o = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i / (n - 1) * 63, a = x | 0, b = Math.min(63, a + 1), k = x - a; o[i] = AU.spec[a] * (1 - k) + AU.spec[b] * k; }
+  return o;
+}
+const rr = (g, x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2)); g.fill(); };
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- visualizers: each make() returns draw(g,w,h,t,dt) ---------- */
+const VIZ = [
+ { id:'classic', name:'Classic Spectrum', blurb:'Rounded bars with falling peak caps.', make(){ const pk=[]; return (g,w,h)=>{ const n=40,b=bands(n),gap=w/n*.3,bw=w/n-gap; g.shadowBlur=14;
+     for(let i=0;i<n;i++){ const v=b[i],bh=Math.max(5,v*h*.9),x=i*(bw+gap)+gap/2,c=col(i/(n-1)); g.fillStyle=c; g.shadowColor=c; rr(g,x,h-bh,bw,bh,bw/2);
+       pk[i]=Math.max(v,(pk[i]||0)-.005); g.shadowBlur=0; g.fillStyle=col(i/(n-1),.9); g.fillRect(x,h-pk[i]*h*.9-8,bw,3); g.shadowBlur=14; } g.shadowBlur=0; }; } },
+ { id:'radial', name:'Radial Spectrum', blurb:'Bars fanning out from a pulsing core.', sq:true, make(){ return (g,w,h,t)=>{ const s=Math.min(w,h),n=84,b=bands(n/2),r0=s*.2*(1+AU.bass*.18);
+     g.save(); g.translate(w/2,h/2); g.rotate(t*.12); g.lineCap='round'; g.lineWidth=Math.max(2,s*.016); g.shadowBlur=10;
+     for(let i=0;i<n;i++){ const k=i<n/2?i:n-1-i, v=b[k], a=i/n*TAU, l=s*.04+v*s*.26, c=col(i/n<.5?i/n*2:(1-i/n)*2); g.strokeStyle=c; g.shadowColor=c; g.beginPath(); g.moveTo(Math.cos(a)*r0,Math.sin(a)*r0); g.lineTo(Math.cos(a)*(r0+l),Math.sin(a)*(r0+l)); g.stroke(); }
+     g.shadowBlur=0; g.strokeStyle=col(.5,.35); g.lineWidth=1.5; g.beginPath(); g.arc(0,0,r0-s*.025,0,TAU); g.stroke(); g.restore(); }; } },
+ { id:'mirror', name:'Mirrored Spectrum', blurb:'Bars grow up and down from a center line.', make(){ return (g,w,h)=>{ const n=44,b=bands(n),gap=w/n*.35,bw=w/n-gap,m=h/2;
+     for(let i=0;i<n;i++){ const bh=Math.max(3,b[i]*h*.46),x=i*(bw+gap)+gap/2; g.fillStyle=col(i/(n-1)); rr(g,x,m-bh,bw,bh,bw/2); g.fillStyle=col(i/(n-1),.4); rr(g,x,m+2,bw,bh*.8,bw/2); } }; } },
+ { id:'wave', name:'Circular Waveform', blurb:'A ring bent by the live waveform.', sq:true, make(){ return (g,w,h,t)=>{ const s=Math.min(w,h),R=s*.3*(1+AU.bass*.1);
+     g.save(); g.translate(w/2,h/2); g.lineJoin='round';
+     [[0,col(.15),3,16],[10,col(.85),1.8,8]].forEach(([off,c,lw,sb])=>{ g.beginPath(); for(let i=0;i<=256;i++){ const j=(i+off)%256,a=i/256*TAU,r=R+AU.wave[j]*s*.22; const x=Math.cos(a)*r,y=Math.sin(a)*r; i?g.lineTo(x,y):g.moveTo(x,y); } g.closePath(); g.strokeStyle=c; g.lineWidth=lw; g.shadowColor=c; g.shadowBlur=sb; g.stroke(); });
+     g.restore(); }; } },
+ { id:'scope', name:'Neon Oscilloscope', blurb:'Luminous trace with persistence ghosts.', make(){ const ghosts=[],frames=[]; return (g,w,h)=>{
+     frames.unshift(Float32Array.from(AU.wave)); if(frames.length>7) frames.pop();
+     g.lineJoin='round'; g.lineCap='round';
+     for(let f=frames.length-1;f>=0;f--){ const wv=frames[f]; g.beginPath(); for(let i=0;i<256;i+=2){ const x=i/255*w,y=h/2+wv[i]*h*.8; i?g.lineTo(x,y):g.moveTo(x,y); }
+       g.strokeStyle=col(f%2?.8:.1,f===0?1:.5/(f+1)); g.lineWidth=f===0?3:1.5; g.shadowColor=col(.3); g.shadowBlur=f===0?18:0; g.stroke(); } g.shadowBlur=0; }; } },
+ { id:'ribbon', name:'Liquid Ribbon', blurb:'Layered ribbons shaped by the spectrum.', make(){ return (g,w,h,t)=>{ const b=bands(24); g.globalCompositeOperation='lighter';
+     for(let L=0;L<4;L++){ const top=[],bot=[]; for(let x=0;x<=w;x+=8){ const u=x/w,bv=b[Math.min(23,(u*23)|0)],ph=u*TAU*(1.1+L*.35)+t*(.7+L*.22)+L*1.7;
+         const cy=h/2+Math.sin(ph)*h*(.1+bv*.28),th=h*(.03+bv*.07); top.push([x,cy-th]); bot.push([x,cy+th]); }
+       g.beginPath(); top.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); for(let i=bot.length-1;i>=0;i--) g.lineTo(bot[i][0],bot[i][1]); g.closePath();
+       const gr=g.createLinearGradient(0,0,w,0); gr.addColorStop(0,col(L/4,.55)); gr.addColorStop(1,col((L/4+.5)%1,.55)); g.fillStyle=gr; g.fill(); }
+     g.globalCompositeOperation='source-over'; }; } },
+ { id:'aurora', name:'Aurora Flow', blurb:'Soft curtains with luminous crests.', make(){ return (g,w,h,t)=>{ const b=bands(20); g.globalCompositeOperation='lighter';
+     for(let L=0;L<3;L++){ const pts=[]; for(let x=0;x<=w;x+=8){ const u=x/w,bv=b[Math.min(19,(u*19)|0)]; pts.push([x,h*(.52-L*.06)+Math.sin(u*TAU*1.3+t*.45+L*2)*h*.07-bv*h*.38]); }
+       g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.lineTo(w,h); g.lineTo(0,h); g.closePath();
+       const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,col(L/2.4,.55)); gr.addColorStop(.6,col(L/2.4,.08)); gr.addColorStop(1,col(L/2.4,0)); g.fillStyle=gr; g.fill();
+       g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.strokeStyle=col(L/2.4,.9); g.lineWidth=2; g.stroke(); }
+     g.globalCompositeOperation='source-over'; }; } },
+ { id:'mountain', name:'Frequency Mountain', blurb:'Three layers of terrain from the spectrum.', make(){ return (g,w,h,t)=>{ const b=bands(32);
+     for(let L=0;L<3;L++){ g.beginPath(); g.moveTo(0,h); for(let x=0;x<=w;x+=6){ const u=x/w,bv=b[Math.min(31,(u*31)|0)]; const y=h-(h*.12+L*h*.05)-bv*h*(.28+L*.2)*(L===0?.8:1)-Math.sin(u*9+L*3+t*.2)*h*.02; g.lineTo(x,y); }
+       g.lineTo(w,h); g.closePath(); const gr=g.createLinearGradient(0,h*.2,0,h); gr.addColorStop(0,col(.15+L*.35,.85-L*.2)); gr.addColorStop(1,col(.15+L*.35,.1)); g.fillStyle=gr; g.fill(); } }; } },
+ { id:'vortex', name:'Vortex Tunnel', blurb:'A perspective tunnel pulsing to the bass.', sq:true, make(){ let z0=0,last=0; return (g,w,h,t)=>{ const s=Math.min(w,h),dt=Math.max(0,t-last); last=t; z0+=Math.min(.05,dt)*(.25+AU.bass*.9);
+     g.save(); g.translate(w/2,h/2); g.lineJoin='round'; const N=14;
+     for(let k=N-1;k>=0;k--){ const z=((k+z0*N)%N)/N, r=Math.pow(z,2.1)*s*.58*(1+AU.beat*.06); if(r<2) continue; const rot=t*.25+z*1.6; g.beginPath();
+       for(let i=0;i<=6;i++){ const a=rot+i/6*TAU; i?g.lineTo(Math.cos(a)*r,Math.sin(a)*r):g.moveTo(Math.cos(a)*r,Math.sin(a)*r); } g.strokeStyle=col(z,.15+z*.85); g.lineWidth=1+z*3.5; g.shadowColor=col(z); g.shadowBlur=z*10; g.stroke(); }
+     g.restore(); }; } },
+ { id:'stars', name:'Starfield Drift', blurb:'Seeded 3D stars that warp with the energy.', make(){ const R=rng(7),st=Array.from({length:150},()=>({x:R()*2-1,y:R()*2-1,z:R()*.95+.05})); let last=0; return (g,w,h,t)=>{ const dt=Math.min(.05,Math.max(0,t-last)); last=t; const sp=dt*(.12+AU.energy*1.3+AU.beat*.2),sc=Math.max(w,h)*.5;
+     const gr=g.createRadialGradient(w/2,h/2,0,w/2,h/2,sc*.5); gr.addColorStop(0,col(.5,.1+AU.bass*.45)); gr.addColorStop(1,col(.5,0)); g.fillStyle=gr; g.fillRect(0,0,w,h); g.lineCap='round';
+     for(const p of st){ const pz=p.z; p.z-=sp; if(p.z<.03){ p.x=R()*2-1; p.y=R()*2-1; p.z=1; continue; }
+       const x=w/2+p.x/p.z*sc*.35,y=h/2+p.y/p.z*sc*.35,px=w/2+p.x/(p.z+sp*3)*sc*.35,py=h/2+p.y/(p.z+sp*3)*sc*.35; if(x<0||x>w||y<0||y>h) { p.z=.02; continue; }
+       g.strokeStyle=col(1-p.z,.3+(1-p.z)*.7); g.lineWidth=.6+(1-p.z)*2.2; g.beginPath(); g.moveTo(px,py); g.lineTo(x,y); g.stroke(); } }; } },
+ { id:'pulse', name:'Concentric Pulse', blurb:'Shockwave rings fired by bass hits.', sq:true, make(){ const rings=[]; let lastB=-1,last=0; return (g,w,h,t)=>{ const s=Math.min(w,h),dt=Math.min(.05,Math.max(0,t-last)); last=t;
+     if(AU.lastBeat!==lastB){ lastB=AU.lastBeat; if(AU.level>.3) rings.push({r:0,a:1}); }
+     g.save(); g.translate(w/2,h/2); const b=bands(90);
+     g.lineWidth=2; for(let i=0;i<90;i++){ const a=i/90*TAU,r0=s*.17,l=s*.02+b[i%45===i?i:89-i]*s*.07; g.strokeStyle=col(i/90<.5?i/45:2-i/45,.8); g.beginPath(); g.moveTo(Math.cos(a)*r0,Math.sin(a)*r0); g.lineTo(Math.cos(a)*(r0+l),Math.sin(a)*(r0+l)); g.stroke(); }
+     for(let i=rings.length-1;i>=0;i--){ const q=rings[i]; q.r+=dt*s*.42; q.a=Math.exp(-q.r/(s*.22)); if(q.a<.03){ rings.splice(i,1); continue; } g.strokeStyle=col(.5-q.r/s*.5+.5*(q.r/s),q.a); g.lineWidth=2+q.a*5; g.shadowColor=col(.5); g.shadowBlur=10; g.beginPath(); g.arc(0,0,s*.2+q.r,0,TAU); g.stroke(); }
+     g.shadowBlur=0; g.fillStyle=col(.5,.25+AU.bass*.5); g.beginPath(); g.arc(0,0,s*.09*(1+AU.bass*.4),0,TAU); g.fill(); g.restore(); }; } },
+ { id:'matrix', name:'Equalizer Matrix', blurb:'LED cells with peak-hold indicators.', make(){ const pk=[]; return (g,w,h)=>{ const C=22,Rw=12,b=bands(C),cw=w/C,ch=h/Rw,pad=Math.min(cw,ch)*.16;
+     for(let i=0;i<C;i++){ const lit=Math.round(b[i]*Rw); pk[i]=Math.max(lit,(pk[i]||0)-.06);
+       for(let j=0;j<Rw;j++){ const on=j<lit,pkc=Math.round(pk[i])-1===j,y=h-(j+1)*ch; g.fillStyle=on||pkc?col(j/(Rw-1),pkc&&!on?.9:1):'rgba(255,255,255,.06)'; rr(g,i*cw+pad,y+pad,cw-pad*2,ch-pad*2,4); } } }; } }
+];
+
+/* ---------- canvas plumbing ---------- */
+const DPR = Math.min(2, devicePixelRatio || 1);
+function fit(cv) {
+  const r = cv.getBoundingClientRect(); const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  if (cv._w !== w || cv._h !== h) { cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR); cv._w = w; cv._h = h; }
+}
+function paint(cv, draw, wide, frameT, forceSq) {
+  fit(cv); const g = cv.getContext('2d'), W = cv._w, H = cv._h;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+  let x, y, w, h;
+  if (forceSq) { const s = Math.min(W * .9, H * .9); w = h = s; x = (W - s) / 2; y = (H - s) / 2; }
+  else if (wide) { x = W * .05; w = W * .9; y = H * .08; h = H * .84; }
+  g.save(); g.translate(x, y); g.beginPath(); g.rect(-20, -20, w + 40, h + 40); g.clip(); draw(g, w, h, frameT); g.restore();
+}
+
+/* ---------- hero wiring ---------- */
+const hero = $('#heroCanvas');
+let heroViz = VIZ[0], heroDraw = heroViz.make();
+const picker = $('#picker');
+VIZ.forEach((v, i) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = v.name; b.setAttribute('aria-pressed', i === 0);
+  b.onclick = () => { heroViz = v; heroDraw = v.make(); $('#tagName').textContent = v.name; [...picker.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  picker.appendChild(b);
+});
+const queue = $('#queue');
+function pickTrack(i, btn) {
+  const T = TRACKS[i]; P.tgt = T.c.map(hex); P.moving = true;
+  $('#cover').style.background = coverCss(T.c); $('#nowTitle').textContent = T.title; $('#nowArtist').textContent = T.artist; $('#pbTitle').textContent = T.title + ' · ' + T.artist;
+  [...queue.children].forEach(c => c.setAttribute('aria-pressed', c === btn));
+}
+TRACKS.forEach((T, i) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'track'; b.setAttribute('aria-pressed', i === 0);
+  b.innerHTML = `<span class="th" style="background:${coverCss(T.c)}"></span><span><b>${T.title}</b><span>${T.artist}</span></span>`;
+  b.onclick = () => pickTrack(i, b); queue.appendChild(b);
+});
+pickTrack(0, queue.children[0]);
+
+const pp = $('#pp');
+const ICON_PAUSE = '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg>';
+const ICON_PLAY = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11a.7.7 0 0 0 1.05.6l9-5.5a.7.7 0 0 0 0-1.2l-9-5.5A.7.7 0 0 0 4 2.5z"/></svg>';
+function setPlaying(on) { AU.playing = on; pp.innerHTML = on ? ICON_PAUSE : ICON_PLAY; pp.setAttribute('aria-pressed', on); pp.setAttribute('aria-label', on ? 'Pause demo' : 'Play demo'); }
+pp.onclick = () => setPlaying(!AU.playing);
+setPlaying(!reduced);
+
+/* ---------- gallery tiles ---------- */
+const tiles = $('#tiles'), tileList = [];
+VIZ.forEach(v => {
+  const el = document.createElement('div'); el.className = 'tile';
+  el.innerHTML = `<canvas aria-hidden="true"></canvas><div><h3>${v.name}</h3><p>${v.blurb}</p></div>`; tiles.appendChild(el);
+  tileList.push({ v, cv: el.querySelector('canvas'), draw: v.make(), vis: false });
+});
+const io = new IntersectionObserver(es => es.forEach(e => { const t = tileList.find(t => t.cv === e.target.querySelector('canvas')); if (t) t.vis = e.isIntersecting; }), { rootMargin: '80px' });
+[...tiles.children].forEach(el => io.observe(el));
+let heroVis = true; new IntersectionObserver(es => heroVis = es[0].isIntersecting).observe($('#win'));
+
+/* ---------- main loop ---------- */
+let last = performance.now(), prog = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  stepPalette(); if (!(reduced && !AU.playing)) stepAudio(dt);
+  if (AU.playing) { prog = (prog + dt / 210) % 1; $('#prog').style.width = (prog * 100 + 18) % 100 + '%'; }
+  if (heroVis) paint(hero, heroDraw, true, AU.t, heroViz.sq);
+  for (const t of tileList) if (t.vis) paint(t.cv, t.draw, true, AU.t, t.v.sq);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if (reduced) { AU.level = 1; for (let i = 0; i < 40; i++) stepAudio(.05); }
+})();
+</script>
+</body>
+</html>
